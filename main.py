@@ -3,8 +3,8 @@ import logging
 from datetime import datetime
 from aiogram import Bot, Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from database import db
 from config import BOT_TOKEN
+from database import db
 from handlers import common, onboarding, daily_report, admin, weekly_report, analytics, photos
 
 # Configure logging
