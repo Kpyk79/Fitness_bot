@@ -1,17 +1,20 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from config import GEMINI_API_KEY
 import logging
 
 # Configure Gemini API only if key is available
 AI_ENABLED = bool(GEMINI_API_KEY)
+client = None
 
 if AI_ENABLED:
     try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        logging.info("✅ Gemini AI configured")
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        logging.info("✅ Gemini AI enabled")
     except Exception as e:
         logging.error(f"Failed to configure Gemini: {e}")
         AI_ENABLED = False
+        client = None
 else:
     logging.warning("⚠️ GEMINI_API_KEY not set - AI features disabled")
 
@@ -90,7 +93,7 @@ async def analyze_client_data(user_data: tuple, metrics_history: list, daily_rep
 Будь конкретним, мотивуючим та професійним. Максимум 300 слів.
 """
         
-        response = genai.generate_content(
+        response = client.models.generate_content(
             model='gemini-1.5-flash',
             contents=prompt
         )
@@ -150,7 +153,7 @@ async def generate_weekly_report(user_data: tuple, metrics_history: list, daily_
 Максимум 200 слів. Будь позитивним та підтримуючим!
 """
         
-        response = genai.generate_content(
+        response = client.models.generate_content(
             model='gemini-1.5-flash',
             contents=prompt
         )
@@ -191,7 +194,7 @@ async def answer_question(user_data: tuple, metrics_history: list, daily_reports
         
         prompt = context + f"\n**Питання тренера:** {question}\n\nДай коротку, конкретну відповідь (до 150 слів):"
         
-        response = genai.generate_content(
+        response = client.models.generate_content(
             model='gemini-1.5-flash',
             contents=prompt
         )
