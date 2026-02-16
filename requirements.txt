@@ -2,3 +2,4 @@ aiogram>=3.0
 aiosqlite
 APScheduler
 python-dotenv
+pytz
