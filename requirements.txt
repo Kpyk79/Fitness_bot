@@ -3,3 +3,4 @@ aiosqlite
 APScheduler
 python-dotenv
 pytz
+google-generativeai
