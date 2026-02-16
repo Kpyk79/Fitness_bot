@@ -3,12 +3,16 @@ import logging
 from datetime import datetime
 from aiogram import Bot, Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from pytz import timezone
 from config import BOT_TOKEN
 from database import db
 from handlers import common, onboarding, daily_report, admin, weekly_report, analytics, photos
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
+
+# Київський часовий пояс
+KYIV_TZ = timezone('Europe/Kiev')
 
 async def check_daily_reminders(bot: Bot):
     users = await db.get_all_users()
@@ -61,12 +65,12 @@ async def main():
     dp.include_router(admin.router)
 
     # Initialize Scheduler
-    scheduler = AsyncIOScheduler()
+    scheduler = AsyncIOScheduler(timezone=KYIV_TZ)
     
-    # Daily reminder at 21:00
+    # Daily reminder at 21:00 Kyiv time
     scheduler.add_job(check_daily_reminders, 'cron', hour=21, minute=0, args=[bot])
     
-    # Weekly check logic runs every day at 10:00 (to catch the 7th day)
+    # Weekly check logic runs every day at 21:00 Kyiv time (to catch the 7th day)
     scheduler.add_job(check_weekly_reminders, 'cron', hour=21, minute=0, args=[bot])
     
     scheduler.start()
