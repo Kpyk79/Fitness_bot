@@ -8,15 +8,11 @@ AI_ENABLED = bool(GEMINI_API_KEY)
 if AI_ENABLED:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        # Use stable model that works with v1beta API
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        logging.info("✅ Gemini AI enabled (gemini-1.5-flash)")
+        logging.info("✅ Gemini AI configured")
     except Exception as e:
-        logging.error(f"Failed to initialize Gemini model: {e}")
-        model = None
+        logging.error(f"Failed to configure Gemini: {e}")
         AI_ENABLED = False
 else:
-    model = None
     logging.warning("⚠️ GEMINI_API_KEY not set - AI features disabled")
 
 async def analyze_client_data(user_data: tuple, metrics_history: list, daily_reports: list) -> str:
@@ -94,8 +90,10 @@ async def analyze_client_data(user_data: tuple, metrics_history: list, daily_rep
 Будь конкретним, мотивуючим та професійним. Максимум 300 слів.
 """
         
-        
-        response = model.generate_content(prompt)
+        response = genai.generate_content(
+            model='gemini-1.5-flash',
+            contents=prompt
+        )
         return response.text
         
     except Exception as e:
@@ -152,7 +150,10 @@ async def generate_weekly_report(user_data: tuple, metrics_history: list, daily_
 Максимум 200 слів. Будь позитивним та підтримуючим!
 """
         
-        response = model.generate_content(prompt)
+        response = genai.generate_content(
+            model='gemini-1.5-flash',
+            contents=prompt
+        )
         return response.text
         
     except Exception as e:
@@ -190,7 +191,10 @@ async def answer_question(user_data: tuple, metrics_history: list, daily_reports
         
         prompt = context + f"\n**Питання тренера:** {question}\n\nДай коротку, конкретну відповідь (до 150 слів):"
         
-        response = model.generate_content(prompt)
+        response = genai.generate_content(
+            model='gemini-1.5-flash',
+            contents=prompt
+        )
         return response.text
         
     except Exception as e:
