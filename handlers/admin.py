@@ -3,6 +3,7 @@ from aiogram.filters import Command
 from database import db
 from config import ADMIN_ID
 from keyboards.inline import get_clients_keyboard
+from utils import ai_service
 
 router = Router()
 
@@ -32,6 +33,9 @@ async def cb_client_stats(callback: types.CallbackQuery):
         await callback.answer("Клієнта не знайдено.")
         return
 
+    # Show loading message
+    await callback.answer("⏳ Генерую AI аналіз...", show_alert=False)
+
     # Fetch full history
     metrics_history = await db.get_all_user_metrics(user_id)
     daily_reports = await db.get_all_daily_reports(user_id)
@@ -46,7 +50,6 @@ async def cb_client_stats(callback: types.CallbackQuery):
         last = metrics_history[-1]
         
         text += "📏 **Заміри (Перший -> Останній):**\n"
-        # 3:waist, 4:chest, 5:belly, 6:hips, 7:l_arm, 8:r_arm, 9:l_leg, 10:r_leg
         text += f"Талія: {first[3]} -> {last[3]} ({last[3]-first[3]:+.1f})\n"
         text += f"Груди: {first[4]} -> {last[4]} ({last[4]-first[4]:+.1f})\n"
         text += f"Живіт: {first[5]} -> {last[5]} ({last[5]-first[5]:+.1f})\n"
@@ -75,8 +78,57 @@ async def cb_client_stats(callback: types.CallbackQuery):
     else:
         text += "Щоденних звітів немає.\n"
 
+    text += "\n" + "=" * 20 + "\n\n"
+    
+    # AI Analysis
+    ai_analysis = await ai_service.analyze_client_data(user, metrics_history, daily_reports)
+    text += "🤖 **AI АНАЛІЗ**\n\n" + ai_analysis
+
     await callback.message.edit_text(text, reply_markup=get_clients_keyboard(await db.get_all_users()))
-    await callback.answer()
+
+@router.message(Command("ai"))
+async def cmd_ai_question(message: types.Message):
+    """Admin chat assistant - ask questions about clients"""
+    if message.from_user.id != ADMIN_ID:
+        return
+    
+    # Parse command: /ai <user_id> <question>
+    parts = message.text.split(maxsplit=2)
+    
+    if len(parts) < 3:
+        await message.answer(
+            "❓ **AI Асистент**\n\n"
+            "Використання: `/ai <user_id> <питання>`\n\n"
+            "Приклад:\n"
+            "`/ai 123456 Чому клієнт не худне?`"
+        )
+        return
+    
+    try:
+        user_id = int(parts[1])
+        question = parts[2]
+    except ValueError:
+        await message.answer("❌ Невірний формат. User ID має бути числом.")
+        return
+    
+    # Get user data
+    user = await db.get_user(user_id)
+    if not user:
+        await message.answer("❌ Клієнта не знайдено.")
+        return
+    
+    # Show typing action
+    await message.bot.send_chat_action(message.chat.id, "typing")
+    
+    # Fetch data
+    metrics_history = await db.get_all_user_metrics(user_id)
+    daily_reports = await db.get_all_daily_reports(user_id)
+    
+    # Get AI answer
+    answer = await ai_service.answer_question(user, metrics_history, daily_reports, question)
+    
+    response = f"💬 **Питання про {user[2]}:**\n{question}\n\n🤖 **Відповідь AI:**\n{answer}"
+    await message.answer(response)
 
 @router.message(Command("stats"))
 async def cmd_stats(message: types.Message):
@@ -97,3 +149,4 @@ async def cmd_general_stats(message: types.Message):
         f"Всього користувачів: {total_users}\n"
     )
     await message.answer(text)
+
