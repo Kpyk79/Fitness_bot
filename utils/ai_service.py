@@ -88,12 +88,14 @@ async def analyze_client_data(user_data: tuple, metrics_history: list, daily_rep
 Будь конкретним, мотивуючим та професійним. Максимум 300 слів.
 """
         
+        
         response = model.generate_content(prompt)
         return response.text
         
     except Exception as e:
-        logging.error(f"AI analysis error: {e}")
-        return "❌ Помилка генерації AI аналізу. Спробуйте пізніше."
+        error_msg = f"AI analysis error: {type(e).__name__}: {str(e)}"
+        logging.error(error_msg)
+        return f"❌ Помилка генерації AI аналізу: {str(e)[:100]}"
 
 
 async def generate_weekly_report(user_data: tuple, metrics_history: list, daily_reports: list) -> str:
