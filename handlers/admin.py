@@ -84,7 +84,13 @@ async def cb_client_stats(callback: types.CallbackQuery):
     ai_analysis = await ai_service.analyze_client_data(user, metrics_history, daily_reports)
     text += "🤖 **AI АНАЛІЗ**\n\n" + ai_analysis
 
-    await callback.message.edit_text(text, reply_markup=get_clients_keyboard(await db.get_all_users()))
+    # Create keyboard with delete button
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="❌ Видалити клієнта", callback_data=f"delete_confirm_{user_id}")]
+    ])
+
+    await callback.message.edit_text(text, reply_markup=keyboard)
 
 @router.message(Command("ai"))
 async def cmd_ai_question(message: types.Message):
@@ -129,6 +135,69 @@ async def cmd_ai_question(message: types.Message):
     
     response = f"💬 **Питання про {user[2]}:**\n{question}\n\n🤖 **Відповідь AI:**\n{answer}"
     await message.answer(response)
+
+@router.callback_query(F.data.startswith("delete_confirm_"))
+async def cb_delete_confirm(callback: types.CallbackQuery):
+    """Show confirmation dialog for deleting a client"""
+    try:
+        user_id = int(callback.data.split("_")[2])
+    except (ValueError, IndexError):
+        await callback.answer("Невірні дані.")
+        return
+    
+    user = await db.get_user(user_id)
+    if not user:
+        await callback.answer("Клієнта не знайдено.")
+        return
+    
+    # Create confirmation keyboard
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ Так, видалити", callback_data=f"delete_execute_{user_id}"),
+            InlineKeyboardButton(text="❌ Скасувати", callback_data=f"client_{user_id}")
+        ]
+    ])
+    
+    text = f"⚠️ **ПІДТВЕРДЖЕННЯ ВИДАЛЕННЯ**\n\n"
+    text += f"Ви впевнені, що хочете видалити клієнта **{user[2]}**?\n\n"
+    text += "Це видалить:\n"
+    text += "• Профіль користувача\n"
+    text += "• Всі заміри\n"
+    text += "• Всі щоденні звіти\n"
+    text += "• Всі фото\n\n"
+    text += "⚠️ **Цю дію неможливо скасувати!**"
+    
+    await callback.message.edit_text(text, reply_markup=keyboard)
+
+@router.callback_query(F.data.startswith("delete_execute_"))
+async def cb_delete_execute(callback: types.CallbackQuery):
+    """Execute client deletion"""
+    try:
+        user_id = int(callback.data.split("_")[2])
+    except (ValueError, IndexError):
+        await callback.answer("Невірні дані.")
+        return
+    
+    user = await db.get_user(user_id)
+    if not user:
+        await callback.answer("Клієнта не знайдено.")
+        return
+    
+    # Delete user
+    await db.delete_user(user_id)
+    
+    await callback.answer(f"✅ Клієнта {user[2]} видалено", show_alert=True)
+    
+    # Show updated client list
+    users = await db.get_all_users()
+    if not users:
+        await callback.message.edit_text("Клієнтів більше немає.")
+    else:
+        await callback.message.edit_text(
+            "Клієнта видалено. Оберіть іншого клієнта:",
+            reply_markup=get_clients_keyboard(users)
+        )
 
 @router.message(Command("stats"))
 async def cmd_stats(message: types.Message):
