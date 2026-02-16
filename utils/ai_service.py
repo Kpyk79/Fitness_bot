@@ -6,9 +6,21 @@ import logging
 AI_ENABLED = bool(GEMINI_API_KEY)
 
 if AI_ENABLED:
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-pro')
-    logging.info("✅ Gemini AI enabled")
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        # Try the latest model first, fallback to 1.5-flash if needed
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        logging.info("✅ Gemini AI enabled (gemini-2.0-flash-exp)")
+    except Exception as e:
+        logging.error(f"Failed to initialize Gemini model: {e}")
+        logging.info("Trying fallback model gemini-1.5-flash...")
+        try:
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            logging.info("✅ Gemini AI enabled (gemini-1.5-flash)")
+        except Exception as e2:
+            logging.error(f"Failed to initialize fallback model: {e2}")
+            model = None
+            AI_ENABLED = False
 else:
     model = None
     logging.warning("⚠️ GEMINI_API_KEY not set - AI features disabled")
