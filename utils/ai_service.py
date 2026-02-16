@@ -94,7 +94,7 @@ async def analyze_client_data(user_data: tuple, metrics_history: list, daily_rep
 """
         
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model='gemini-2.5-flash',
             contents=prompt
         )
         return response.text
@@ -154,7 +154,7 @@ async def generate_weekly_report(user_data: tuple, metrics_history: list, daily_
 """
         
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model='gemini-2.5-flash',
             contents=prompt
         )
         return response.text
@@ -195,7 +195,7 @@ async def answer_question(user_data: tuple, metrics_history: list, daily_reports
         prompt = context + f"\n**Питання тренера:** {question}\n\nДай коротку, конкретну відповідь (до 150 слів):"
         
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model='gemini-2.5-flash',
             contents=prompt
         )
         return response.text
