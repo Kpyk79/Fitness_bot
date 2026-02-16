@@ -4,3 +4,4 @@ APScheduler
 python-dotenv
 pytz
 google-generativeai
+-q -U google-genai
