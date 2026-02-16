@@ -2,15 +2,25 @@ import google.generativeai as genai
 from config import GEMINI_API_KEY
 import logging
 
-# Configure Gemini API
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-pro')
+# Configure Gemini API only if key is available
+AI_ENABLED = bool(GEMINI_API_KEY)
+
+if AI_ENABLED:
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel('gemini-pro')
+    logging.info("✅ Gemini AI enabled")
+else:
+    model = None
+    logging.warning("⚠️ GEMINI_API_KEY not set - AI features disabled")
 
 async def analyze_client_data(user_data: tuple, metrics_history: list, daily_reports: list) -> str:
     """
     Comprehensive AI analysis of client data.
     Returns formatted analysis with recommendations.
     """
+    if not AI_ENABLED:
+        return "⚠️ AI аналіз недоступний. Додайте GEMINI_API_KEY в налаштування."
+    
     try:
         # Prepare data for AI
         user_id, username, full_name, age, gender, join_date = user_data
@@ -90,6 +100,9 @@ async def generate_weekly_report(user_data: tuple, metrics_history: list, daily_
     """
     Generate weekly motivational report with recommendations.
     """
+    if not AI_ENABLED:
+        return "⚠️ AI звіти недоступні. Додайте GEMINI_API_KEY."
+    
     try:
         user_id, username, full_name, age, gender, join_date = user_data
         
@@ -143,6 +156,9 @@ async def answer_question(user_data: tuple, metrics_history: list, daily_reports
     """
     Answer admin's question about specific client.
     """
+    if not AI_ENABLED:
+        return "⚠️ AI асистент недоступний. Додайте GEMINI_API_KEY."
+    
     try:
         user_id, username, full_name, age, gender, join_date = user_data
         
