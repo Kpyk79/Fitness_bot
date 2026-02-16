@@ -4,9 +4,10 @@ from datetime import datetime
 from aiogram import Bot, Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from pytz import timezone
-from config import BOT_TOKEN
+from config import BOT_TOKEN, ADMIN_ID
 from database import db
 from handlers import common, onboarding, daily_report, admin, weekly_report, analytics, photos
+from utils import ai_service
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -47,6 +48,34 @@ async def check_weekly_reminders(bot: Bot):
         except Exception as e:
             logging.error(f"Failed to send weekly reminder to {user_id}: {e}")
 
+async def send_weekly_ai_reports(bot: Bot):
+    """Send weekly AI-generated reports to admin about all clients"""
+    users = await db.get_all_users()
+    
+    if not users:
+        return
+    
+    try:
+        admin_message = "📊 **ЩОТИЖНЕВІ AI ЗВІТИ**\n\n"
+        
+        for user in users:
+            user_id = user[0]
+            
+            # Fetch user data
+            metrics_history = await db.get_all_user_metrics(user_id)
+            daily_reports = await db.get_all_daily_reports(user_id)
+            
+            # Generate AI report
+            report = await ai_service.generate_weekly_report(user, metrics_history, daily_reports)
+            admin_message += f"👤 **{user[2]}** (ID: {user_id})\n{report}\n\n" + "="*30 + "\n\n"
+        
+        # Send to admin
+        await bot.send_message(chat_id=ADMIN_ID, text=admin_message)
+        logging.info("Weekly AI reports sent to admin")
+        
+    except Exception as e:
+        logging.error(f"Failed to send weekly AI reports: {e}")
+
 async def main():
     # Initialize DB
     await db.init_db()
@@ -72,6 +101,9 @@ async def main():
     
     # Weekly check logic runs every day at 21:00 Kyiv time (to catch the 7th day)
     scheduler.add_job(check_weekly_reminders, 'cron', hour=21, minute=0, args=[bot])
+    
+    # Weekly AI reports every Sunday at 20:00 Kyiv time
+    scheduler.add_job(send_weekly_ai_reports, 'cron', day_of_week='sun', hour=20, minute=0, args=[bot])
     
     scheduler.start()
 
