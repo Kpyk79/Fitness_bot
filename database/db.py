@@ -152,3 +152,13 @@ async def get_all_daily_reports(user_id: int):
             ORDER BY date ASC
         """, (user_id,)) as cursor:
             return await cursor.fetchall()
+
+async def delete_user(user_id: int):
+    """Delete user and all related data (metrics, daily_reports, photos)"""
+    async with aiosqlite.connect(DB_NAME) as db:
+        # Delete from all tables
+        await db.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
+        await db.execute("DELETE FROM metrics WHERE user_id = ?", (user_id,))
+        await db.execute("DELETE FROM daily_reports WHERE user_id = ?", (user_id,))
+        await db.execute("DELETE FROM photos WHERE user_id = ?", (user_id,))
+        await db.commit()
